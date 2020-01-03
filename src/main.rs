@@ -10,27 +10,30 @@ fn pchar<'a>(val: &'a str, c: char) -> Result<String, String> {
         Err(val.to_string())
     }
 }
-trait AnyOf: IntoIterator + Sized {
-    fn any_of<X, T, B: (FnMut(&Self::Item) -> Result<T, X>)>(
-        self,
-        mut predicate: B,
-    ) -> Result<Result<T, X>, String> {
-        let mut iter = self.into_iter();
-        let mut last_seen = match iter.next() {
-            Some(x) => x,
-            None => return Err("empty".to_string()),
-        };
-        for i in iter {
-            if let Ok(t) = predicate(&last_seen) {
-                return Ok(Ok(t));
-            }
-            last_seen = i;
-        }
-        Ok(predicate(&last_seen))
-    }
+trait AnyOf {
+    type X;
+    fn any_of<T, E>(self, predicate: impl FnMut(&Self::X) -> Result<T, E>) -> Option<Result<T, E>>;
 }
 
-impl<X, T: IntoIterator<Item = X>> AnyOf for T {}
+impl<I: IntoIterator> AnyOf for I {
+    type X = I::Item;
+
+    fn any_of<T, E>(
+        self,
+        mut predicate: impl FnMut(&Self::X) -> Result<T, E>,
+    ) -> Option<Result<T, E>> {
+        let mut last_err = None;
+
+        for i in self.into_iter() {
+            match predicate(&i) {
+                x @ Ok(_) => return Some(x),
+                e @ Err(_) => last_err = Some(e),
+            }
+        }
+
+        last_err
+    }
+}
 fn main() {
     let list = ["15", "XBC", "AYZ"].as_ref();
     println!("{:#?}", list.any_of(|x| pchar(x, 'A')).unwrap());
