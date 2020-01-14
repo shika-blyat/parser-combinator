@@ -1,8 +1,9 @@
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ParserError {
     remaining: String,
     reason: Option<String>,
 }
+#[allow(dead_code)]
 impl ParserError {
     pub fn new_no_reason(remaining: String) -> Self {
         Self {

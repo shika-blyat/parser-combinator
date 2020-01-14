@@ -1,40 +1,32 @@
 use crate::combinators::{many, many1};
 use crate::common::{take_char, take_digit, take_str};
 use crate::error::ParserError;
-use crate::parser::{Assoc, Atom, Expr, Number, Operator, Parser};
-pub enum Bin {
-    Binary {
-        left: Box<Bin>,
-        op: Operator,
-        right: Box<Bin>,
-    },
-    Atom(Atom),
-}
-impl Bin {
-    pub fn new_bin(lbin: Bin, op: Operator, rbin: Bin) -> Self {
-        let (left, right) = (Box::new(lbin), Box::new(rbin));
-        Self::Binary { left, op, right }
-    }
-    pub fn new_atom(atom: Atom) -> Self {
-        Self::Atom(atom)
-    }
-}
+use crate::parser::{Assoc, Bin, Expr, Number, OpTerm, Operator, Parser};
 
-pub fn into_postfix() -> Parser<Expr, Expr> {
+pub fn into_ast() -> Parser<Bin, Vec<OpTerm>> {
     Box::new(|tokens| {
-        let mut op_stack: Expr = vec![];
-        let mut output = vec![];
-        let ast: Option<Bin> = None;
-        for i in tokens {
+        let mut op_stack: Vec<OpTerm> = vec![];
+        let mut ast: Vec<Bin> = vec![];
+        for i in tokens.into_iter().rev() {
             match i {
-                Atom::Lit(lit) => output.push(Atom::Lit(lit)),
-                Atom::Var(ident) => output.push(Atom::Var(ident)),
-                Atom::Op(op) => {
+                OpTerm::OpTerm(Expr::Lit(lit)) => ast.push(Bin::new_expr(Expr::Lit(lit))),
+                OpTerm::OpTerm(Expr::Var(ident)) => ast.push(Bin::new_expr(Expr::Var(ident))),
+                OpTerm::Op(op) => {
                     while op_stack.last().is_some() {
                         let last = op_stack.last().unwrap();
-                        if let Atom::Op(last_op) = last {
+                        if let OpTerm::Op(last_op) = last {
                             if last_op.precedence >= op.precedence {
-                                output.push(op_stack.pop().unwrap());
+                                let operator = match op_stack.pop().unwrap() {
+                                    OpTerm::Op(op) => op,
+                                    _ => unreachable!(),
+                                };
+                                let roperand = ast.pop().unwrap();
+                                let loperand = ast.pop().unwrap();
+                                ast.push(Bin::new_bin(
+                                    Expr::BinOp(Box::new(roperand)),
+                                    operator,
+                                    Expr::BinOp(Box::new(loperand)),
+                                ));
                             } else {
                                 break;
                             }
@@ -42,18 +34,26 @@ pub fn into_postfix() -> Parser<Expr, Expr> {
                             break;
                         }
                     }
-                    op_stack.push(Atom::Op(op));
+                    op_stack.push(OpTerm::Op(op));
                 }
-                Atom::Parens(expr) => into_postfix()(expr)?
-                    .1
-                    .into_iter()
-                    .for_each(|x| output.push(x)),
+                OpTerm::OpTerm(Expr::Operation(expr)) => ast.push(into_ast()(expr)?.1),
+                _ => unreachable!(),
             }
         }
         for i in op_stack.into_iter().rev() {
-            output.push(i);
+            let operator = match i {
+                OpTerm::Op(op) => op,
+                _ => unreachable!(),
+            };
+            let roperand = ast.pop().unwrap();
+            let loperand = ast.pop().unwrap();
+            ast.push(Bin::new_bin(
+                Expr::BinOp(Box::new(roperand)),
+                operator,
+                Expr::BinOp(Box::new(loperand)),
+            ));
         }
-        Ok(("".to_string(), output))
+        Ok(("".to_string(), ast[0].clone()))
     })
 }
 
@@ -78,7 +78,7 @@ pub fn take_number() -> Parser<Number, String> {
     })
 }
 
-pub fn take_operator() -> Parser<Atom, String> {
+pub fn take_operator() -> Parser<OpTerm, String> {
     Box::new(|s| {
         take_str("+".to_string())(s.clone())
             .or_else(|error| take_str("*".to_string())(error.remaining()))
@@ -87,7 +87,7 @@ pub fn take_operator() -> Parser<Atom, String> {
             .and_then(|(remaining, op)| match op.as_str() {
                 "+" => Ok((
                     remaining,
-                    Atom::Op(Operator {
+                    OpTerm::Op(Operator {
                         lexeme: op,
                         precedence: 5,
                         assoc: Assoc::Left,
@@ -95,7 +95,7 @@ pub fn take_operator() -> Parser<Atom, String> {
                 )),
                 "*" => Ok((
                     remaining,
-                    Atom::Op(Operator {
+                    OpTerm::Op(Operator {
                         lexeme: op,
                         precedence: 10,
                         assoc: Assoc::Left,
@@ -103,7 +103,7 @@ pub fn take_operator() -> Parser<Atom, String> {
                 )),
                 "/" => Ok((
                     remaining,
-                    Atom::Op(Operator {
+                    OpTerm::Op(Operator {
                         lexeme: op,
                         precedence: 10,
                         assoc: Assoc::Left,
@@ -111,7 +111,7 @@ pub fn take_operator() -> Parser<Atom, String> {
                 )),
                 "-" => Ok((
                     remaining,
-                    Atom::Op(Operator {
+                    OpTerm::Op(Operator {
                         lexeme: op,
                         precedence: 5,
                         assoc: Assoc::Left,
@@ -120,4 +120,61 @@ pub fn take_operator() -> Parser<Atom, String> {
                 _ => Err(ParserError::new(s, format!("Unknwon operator: {}", op))),
             })
     })
+}
+
+#[test]
+fn ast() {
+    use crate::parser::build_ast;
+    use crate::parser::Literal;
+
+    assert_eq!(
+        build_ast()("(1 + 2) * 3".to_string()),
+        Ok((
+            "".to_string(),
+            Bin::Binary {
+                left: Expr::BinOp(Box::new(Bin::Binary {
+                    left: Expr::BinOp(Box::new(Bin::Expr(Expr::Lit(Literal::Num(Number::I32(1)))))),
+                    op: Operator {
+                        lexeme: "+".to_string(),
+                        precedence: 5,
+                        assoc: Assoc::Left,
+                    },
+                    right: Expr::BinOp(Box::new(Bin::Expr(Expr::Lit(Literal::Num(Number::I32(
+                        2
+                    )))))),
+                })),
+                op: Operator {
+                    lexeme: "*".to_string(),
+                    precedence: 10,
+                    assoc: Assoc::Left,
+                },
+                right: Expr::BinOp(Box::new(Bin::Expr(Expr::Lit(Literal::Num(Number::I32(3)))))),
+            },
+        ))
+    );
+    assert_eq!(
+        build_ast()("1 + 2 * 3".to_string()),
+        Ok((
+            "".to_string(),
+            Bin::Binary {
+                left: Expr::BinOp(Box::new(Bin::Expr(Expr::Lit(Literal::Num(Number::I32(1)))))),
+                op: Operator {
+                    lexeme: "+".to_string(),
+                    precedence: 5,
+                    assoc: Assoc::Left,
+                },
+                right: Expr::BinOp(Box::new(Bin::Binary {
+                    left: Expr::BinOp(Box::new(Bin::Expr(Expr::Lit(Literal::Num(Number::I32(2)))))),
+                    op: Operator {
+                        lexeme: "*".to_string(),
+                        precedence: 10,
+                        assoc: Assoc::Left,
+                    },
+                    right: Expr::BinOp(Box::new(Bin::Expr(Expr::Lit(Literal::Num(Number::I32(
+                        3
+                    )))))),
+                })),
+            },
+        ))
+    );
 }
