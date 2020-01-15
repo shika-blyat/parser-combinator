@@ -5,20 +5,17 @@ impl Bin {
     pub fn into_typed(self) -> Result<Bin, ParserError> {
         match self {
             Bin::Bin(Binary {
-                mut left,
-                mut right,
-                op,
-                ..
+                left, right, op, ..
             }) => {
                 let left = match left.unwrap_bin() {
-                    Some(bin) => Box::new(bin.clone().into_typed()?),
-                    None => unreachable!(),
+                    Some(bin) => Box::new(bin.into_typed()?),
+                    None => return Err(ParserError::new_no_rem("Internal interpreter error, unexpected non BinOp variant on the left side of an Binary expression".to_string())),
                 };
                 let right = match right.unwrap_bin() {
-                    Some(bin) => Box::new(bin.clone().into_typed()?),
-                    None => unreachable!(),
+                    Some(bin) => Box::new(bin.into_typed()?),
+                    None => return Err(ParserError::new_no_rem("Internal interpreter error, unexpected non BinOp variant on the left side of an Binary expression".to_string())),
                 };
-                let expr_type = binary_type(left.get_type(), &op, right.get_type())?;
+                let expr_type = binary_type(left.get_type()?, &op, right.get_type()?)?;
                 Ok(Bin::new_bin_typed(
                     Expr::BinOp(left),
                     op,
