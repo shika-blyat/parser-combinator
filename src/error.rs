@@ -24,6 +24,13 @@ impl ParserError {
             remaining: remaining,
         }
     }
+    pub fn empty() -> Self {
+        let empty = "".to_string();
+        Self {
+            reason: None,
+            remaining: empty,
+        }
+    }
     pub fn remaining(&self) -> String {
         self.remaining.clone()
     }

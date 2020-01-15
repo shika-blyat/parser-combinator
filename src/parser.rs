@@ -9,8 +9,17 @@ pub type Parser<T, X> = Box<dyn Fn(X) -> Result<(String, T), ParserError>>;
 pub enum Number {
     I32(i32),
     F32(f32),
+    U32(u32),
 }
-
+impl Number {
+    pub fn get_type(&self) -> Type {
+        match self {
+            Self::I32(num) => Type::I32,
+            Self::U32(num) => Type::U32,
+            Self::F32(num) => Type::F32,
+        }
+    }
+}
 #[derive(Debug, Clone, PartialEq)]
 pub enum Type {
     U32,
@@ -20,6 +29,13 @@ pub enum Type {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Literal {
     Num(Number),
+}
+impl Literal {
+    pub fn get_type(&self) -> Type {
+        match self {
+            Self::Num(num) => num.get_type(),
+        }
+    }
 }
 #[derive(Debug, Clone, PartialEq)]
 pub enum OpTerm {
@@ -32,6 +48,21 @@ pub enum Expr {
     Var(String),
     Operation(Vec<OpTerm>),
     BinOp(Box<Bin>),
+}
+impl Expr {
+    pub fn get_type(&self) -> Type {
+        match self {
+            Self::Lit(literal) => literal.get_type(),
+            Self::Var(_) => panic!("Cannot know the type of a variable yet"),
+            _ => unreachable!(), // In the typed ast, there is normally no Operation variant
+        }
+    }
+    pub fn unwrap_bin<'a>(&'a mut self) -> Option<&'a mut Bin> {
+        match self {
+            Self::BinOp(bin) => Some(bin),
+            _ => None,
+        }
+    }
 }
 #[derive(Debug, Clone, PartialEq)]
 pub struct Operator {
@@ -51,19 +82,47 @@ pub enum Assoc {
 #[derive(Debug, Clone, PartialEq)]
 #[allow(dead_code)]
 pub enum Bin {
-    Binary {
-        left: Expr,
-        op: Operator,
-        right: Expr,
-    },
-    Expr(Expr),
+    Bin(Binary),
+    Uno(Expr),
+}
+#[derive(Debug, Clone, PartialEq)]
+pub struct Binary {
+    pub left: Expr,
+    pub op: Operator,
+    pub right: Expr,
+    pub expr_type: Option<Type>,
 }
 impl Bin {
     pub fn new_bin(left: Expr, op: Operator, right: Expr) -> Self {
-        Self::Binary { left, op, right }
+        Self::Bin(Binary {
+            left,
+            op,
+            right,
+            expr_type: None,
+        })
     }
-    pub fn new_expr(expr: Expr) -> Self {
-        Self::Expr(expr)
+    pub fn new_bin_typed(left: Expr, op: Operator, right: Expr, expr_type: Type) -> Self {
+        Self::Bin(Binary {
+            left,
+            op,
+            right,
+            expr_type,
+        })
+    }
+    pub fn new_uno(expr: Expr) -> Self {
+        Self::Uno(expr)
+    }
+    pub fn get_type(&self) -> Type {
+        match self {
+            Bin::Bin(binary) => binary.expr_type.clone().unwrap(),
+            Bin::Uno(_) => panic!("Cannot get the type of an unary expr"),
+        }
+    }
+    pub fn set_type(&mut self, new_expr_type: Type) {
+        match self {
+            Bin::Bin(binary) => binary.expr_type = Some(new_expr_type),
+            Bin::Uno(_) => panic!("Cannot set the type of an unary expr"),
+        }
     }
 }
 pub fn take_expr() -> Parser<Vec<OpTerm>, String> {
@@ -77,11 +136,13 @@ pub fn take_expr() -> Parser<Vec<OpTerm>, String> {
             })
             .or_else(|error| {
                 take_char('(')(error.remaining()).and_then(|(remaining, _)| {
-                    let (remaining, expr) = many(take_expr())(remaining)?;
+                    let (remaining, expr) = many1(take_expr())(remaining)?;
                     let (remaining, _) = take_char(')')(remaining)?;
                     Ok((
                         remaining,
-                        vec![OpTerm::OpTerm(Expr::Operation(expr[0].clone()))],
+                        vec![OpTerm::OpTerm(Expr::Operation(
+                            expr.into_iter().nth(0).unwrap(),
+                        ))],
                     ))
                 })
             })?;
@@ -104,11 +165,13 @@ pub fn take_expr() -> Parser<Vec<OpTerm>, String> {
                 })
                 .or_else(|error| {
                     take_char('(')(error.remaining()).and_then(|(remaining, _)| {
-                        let (remaining, expr) = many(take_expr())(remaining)?;
+                        let (remaining, expr) = many1(take_expr())(remaining)?;
                         let (remaining, _) = take_char(')')(remaining)?;
                         Ok((
                             remaining,
-                            vec![OpTerm::OpTerm(Expr::Operation(expr[0].clone()))],
+                            vec![OpTerm::OpTerm(Expr::Operation(
+                                expr.into_iter().nth(0).unwrap(),
+                            ))],
                         ))
                     })
                 })

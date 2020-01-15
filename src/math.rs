@@ -9,8 +9,8 @@ pub fn into_ast() -> Parser<Bin, Vec<OpTerm>> {
         let mut ast: Vec<Bin> = vec![];
         for i in tokens.into_iter().rev() {
             match i {
-                OpTerm::OpTerm(Expr::Lit(lit)) => ast.push(Bin::new_expr(Expr::Lit(lit))),
-                OpTerm::OpTerm(Expr::Var(ident)) => ast.push(Bin::new_expr(Expr::Var(ident))),
+                OpTerm::OpTerm(Expr::Lit(lit)) => ast.push(Bin::new_uno(Expr::Lit(lit))),
+                OpTerm::OpTerm(Expr::Var(ident)) => ast.push(Bin::new_uno(Expr::Var(ident))),
                 OpTerm::Op(op) => {
                     while op_stack.last().is_some() {
                         let last = op_stack.last().unwrap();
