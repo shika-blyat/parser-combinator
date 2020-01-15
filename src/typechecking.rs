@@ -1,6 +1,5 @@
 use crate::error::ParserError;
-use crate::parser::{Bin, Binary, Expr, Literal, Number, Operator, Parser, Type};
-use std::ops::Deref;
+use crate::parser::{Bin, Binary, Expr, Operator, Parser, Type};
 
 impl Bin {
     pub fn into_typed(self) -> Result<Bin, ParserError> {
@@ -11,22 +10,27 @@ impl Bin {
                 op,
                 ..
             }) => {
-                let type_left = match left.unwrap_bin() {
-                    Some(bin) => bin.clone().into_typed()?,
-                    None => left.get_type(),
+                let left = match left.unwrap_bin() {
+                    Some(bin) => Box::new(bin.clone().into_typed()?),
+                    None => unreachable!(),
                 };
-                let type_right = match right.unwrap_bin() {
-                    Some(bin) => bin.clone().into_typed()?,
-                    None => right.get_type(),
+                let right = match right.unwrap_bin() {
+                    Some(bin) => Box::new(bin.clone().into_typed()?),
+                    None => unreachable!(),
                 };
-                let expr_type = binary_type(&type_left, &op, &type_right);
-                Ok(Bin::new_bin(left, op, right))
+                let expr_type = binary_type(left.get_type(), &op, right.get_type())?;
+                Ok(Bin::new_bin_typed(
+                    Expr::BinOp(left),
+                    op,
+                    Expr::BinOp(right),
+                    expr_type,
+                ))
             }
             Bin::Uno(expr) => Ok(Bin::Uno(expr)),
         }
     }
 }
-fn binary_type(left: &Type, op: &Operator, right: &Type) -> Result<Type, ParserError> {
+fn binary_type(left: Type, op: &Operator, right: Type) -> Result<Type, ParserError> {
     match left {
         Type::U32 => match right {
             Type::U32 => match op.lexeme.as_str() {
@@ -87,7 +91,7 @@ fn binary_type(left: &Type, op: &Operator, right: &Type) -> Result<Type, ParserE
 
 pub fn type_ast() -> Parser<Bin, Bin> {
     Box::new(|bin| {
-        let mut typed_bin = bin.into_typed()?;
+        let typed_bin = bin.into_typed()?;
         Ok(("".to_string(), typed_bin))
     })
 }

@@ -9,18 +9,19 @@ pub type Parser<T, X> = Box<dyn Fn(X) -> Result<(String, T), ParserError>>;
 pub enum Number {
     I32(i32),
     F32(f32),
-    U32(u32),
+    //U32(u32),
 }
 impl Number {
     pub fn get_type(&self) -> Type {
         match self {
-            Self::I32(num) => Type::I32,
-            Self::U32(num) => Type::U32,
-            Self::F32(num) => Type::F32,
+            Self::I32(_) => Type::I32,
+            //Self::U32(_) => Type::U32,
+            Self::F32(_) => Type::F32,
         }
     }
 }
 #[derive(Debug, Clone, PartialEq)]
+#[allow(dead_code)]
 pub enum Type {
     U32,
     I32,
@@ -106,7 +107,7 @@ impl Bin {
             left,
             op,
             right,
-            expr_type,
+            expr_type: Some(expr_type),
         })
     }
     pub fn new_uno(expr: Expr) -> Self {
@@ -115,13 +116,7 @@ impl Bin {
     pub fn get_type(&self) -> Type {
         match self {
             Bin::Bin(binary) => binary.expr_type.clone().unwrap(),
-            Bin::Uno(_) => panic!("Cannot get the type of an unary expr"),
-        }
-    }
-    pub fn set_type(&mut self, new_expr_type: Type) {
-        match self {
-            Bin::Bin(binary) => binary.expr_type = Some(new_expr_type),
-            Bin::Uno(_) => panic!("Cannot set the type of an unary expr"),
+            Bin::Uno(expr) => expr.get_type(),
         }
     }
 }

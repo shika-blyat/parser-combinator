@@ -1,4 +1,3 @@
-use crate::error::ParserError;
 use crate::parser::Parser;
 
 pub fn many<T: 'static>(a: Parser<T, String>) -> Parser<Vec<T>, String> {

@@ -21,6 +21,7 @@ pub fn take_digit() -> Parser<char, String> {
     })
 }
 
+#[allow(dead_code)]
 pub fn take_alpha() -> Parser<char, String> {
     Box::new(|s| {
         if s.len() == 0 {
