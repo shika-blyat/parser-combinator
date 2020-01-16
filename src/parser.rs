@@ -124,6 +124,15 @@ pub enum OpTerm {
     Op(Operator),
     OpTerm(Expr),
 }
+impl OpTerm {
+    pub fn new_op(lexeme: String, precedence: i32, assoc: Assoc) -> Self {
+        Self::Op(Operator {
+            lexeme,
+            precedence,
+            assoc,
+        })
+    }
+}
 #[derive(Debug, Clone, PartialEq)]
 #[allow(dead_code)]
 pub enum Expr {

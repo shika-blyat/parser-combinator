@@ -110,38 +110,10 @@ pub fn take_operator() -> Parser<OpTerm, String> {
             .or_else(|error| take_str("/".to_string())(error.remaining()))
             .or_else(|error| take_str("-".to_string())(error.remaining()))
             .and_then(|(remaining, op)| match op.as_str() {
-                "+" => Ok((
-                    remaining,
-                    OpTerm::Op(Operator {
-                        lexeme: op,
-                        precedence: 5,
-                        assoc: Assoc::Left,
-                    }),
-                )),
-                "*" => Ok((
-                    remaining,
-                    OpTerm::Op(Operator {
-                        lexeme: op,
-                        precedence: 10,
-                        assoc: Assoc::Left,
-                    }),
-                )),
-                "/" => Ok((
-                    remaining,
-                    OpTerm::Op(Operator {
-                        lexeme: op,
-                        precedence: 10,
-                        assoc: Assoc::Left,
-                    }),
-                )),
-                "-" => Ok((
-                    remaining,
-                    OpTerm::Op(Operator {
-                        lexeme: op,
-                        precedence: 5,
-                        assoc: Assoc::Left,
-                    }),
-                )),
+                "+" => Ok((remaining, OpTerm::new_op(op, 5, Assoc::Left))),
+                "-" => Ok((remaining, OpTerm::new_op(op, 5, Assoc::Left))),
+                "*" => Ok((remaining, OpTerm::new_op(op, 10, Assoc::Left))),
+                "/" => Ok((remaining, OpTerm::new_op(op, 10, Assoc::Left))),
                 _ => Err(ParserError::new(s, format!("Unknwon operator: {}", op))),
             })
     })
