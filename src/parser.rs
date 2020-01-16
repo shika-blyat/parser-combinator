@@ -2,7 +2,6 @@ use crate::combinators::{many, many1};
 use crate::common::{take_char, take_whitespaces};
 use crate::error::ParserError;
 use crate::math::{into_ast, take_number, take_operator};
-use std::ops::Deref;
 
 pub type Parser<T, X> = Box<dyn Fn(X) -> Result<(String, T), ParserError>>;
 
@@ -52,21 +51,16 @@ pub enum Expr {
     BinOp(Box<Bin>),
 }
 impl Expr {
-    pub fn get_type(&self) -> Result<Type, ParserError> {
+    pub fn get_type(&self) -> Type {
         match self {
-            Self::Lit(literal) => Ok(literal.get_type()),
-            Self::Var(_) => Err(ParserError::new_no_rem(
-                "Cannot know the type of a variable yet".to_string(),
-            )),
-            Self::BinOp(_) => Err(ParserError::new_no_rem(
-                "Unexpected `get_type` call on Expr::BinOp variant".to_string(),
-            )),
-            _ => unreachable!(),
+            Self::Lit(literal) => literal.get_type(),
+            Self::Var(_) => panic!("Cannot know the type of a variable yet"),
+            _ => unreachable!(), // In the typed ast, there is normally no Operation variant
         }
     }
-    pub fn unwrap_bin<'a>(self) -> Option<Bin> {
+    pub fn unwrap_bin<'a>(&'a mut self) -> Option<&'a mut Bin> {
         match self {
-            Self::BinOp(bin) => Some(bin.deref().clone()),
+            Self::BinOp(bin) => Some(bin),
             _ => None,
         }
     }
@@ -119,15 +113,10 @@ impl Bin {
     pub fn new_uno(expr: Expr) -> Self {
         Self::Uno(expr)
     }
-    pub fn get_type(&self) -> Result<Type, ParserError> {
+    pub fn get_type(&self) -> Type {
         match self {
-            Bin::Bin(binary) => match binary.expr_type.clone() {
-                Some(x) => Ok(x),
-                None => Err(ParserError::new_no_rem(
-                    "Cannot get the type of an untyped Bin node".to_string(),
-                )),
-            },
-            Bin::Uno(expr) => Ok(expr.get_type()?),
+            Bin::Bin(binary) => binary.expr_type.clone().unwrap(),
+            Bin::Uno(expr) => expr.get_type(),
         }
     }
 }
