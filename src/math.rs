@@ -3,11 +3,20 @@ use crate::common::{take_char, take_digit, take_str};
 use crate::error::ParserError;
 use crate::parser::{Assoc, Bin, Expr, Number, OpTerm, Operator, Parser};
 
+fn add_infix_op(ast: &mut Vec<Bin>, operator: Operator) {
+    let roperand = ast.pop().unwrap();
+    let loperand = ast.pop().unwrap();
+    ast.push(Bin::new_bin(
+        Expr::BinOp(Box::new(loperand)),
+        operator,
+        Expr::BinOp(Box::new(roperand)),
+    ));
+}
 pub fn into_ast() -> Parser<Bin, Vec<OpTerm>> {
     Box::new(|tokens| {
         let mut op_stack: Vec<OpTerm> = vec![];
         let mut ast: Vec<Bin> = vec![];
-        for i in tokens.into_iter().rev() {
+        for i in tokens.into_iter() {
             match i {
                 OpTerm::OpTerm(Expr::Lit(lit)) => ast.push(Bin::new_uno(Expr::Lit(lit))),
                 OpTerm::OpTerm(Expr::Var(ident)) => ast.push(Bin::new_uno(Expr::Var(ident))),
@@ -20,13 +29,7 @@ pub fn into_ast() -> Parser<Bin, Vec<OpTerm>> {
                                     OpTerm::Op(op) => op,
                                     _ => unreachable!(),
                                 };
-                                let roperand = ast.pop().unwrap();
-                                let loperand = ast.pop().unwrap();
-                                ast.push(Bin::new_bin(
-                                    Expr::BinOp(Box::new(roperand)),
-                                    operator,
-                                    Expr::BinOp(Box::new(loperand)),
-                                ));
+                                add_infix_op(&mut ast, operator);
                             } else {
                                 break;
                             }
@@ -41,19 +44,13 @@ pub fn into_ast() -> Parser<Bin, Vec<OpTerm>> {
             }
         }
         for i in op_stack.into_iter().rev() {
-            let operator = match i {
-                OpTerm::Op(op) => op,
-                _ => unreachable!(),
-            };
-            let roperand = ast.pop().unwrap();
-            let loperand = ast.pop().unwrap();
-            ast.push(Bin::new_bin(
-                Expr::BinOp(Box::new(roperand)),
-                operator,
-                Expr::BinOp(Box::new(loperand)),
-            ));
+            if let OpTerm::Op(op) = i {
+                add_infix_op(&mut ast, op);
+            } else {
+                unreachable!();
+            }
         }
-        Ok(("".to_string(), ast[0].clone()))
+        Ok(("".to_string(), ast.into_iter().nth(0).unwrap()))
     })
 }
 
