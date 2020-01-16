@@ -1,5 +1,5 @@
 use crate::error::ParserError;
-use crate::parser::{Bin, Binary, Expr, Literal, Number, Operator, Parser, Type};
+use crate::parser::{Bin, Binary, Expr, Literal, Operator};
 
 pub fn eval_ast(bin: Bin) -> Result<Literal, ParserError> {
     match bin {
@@ -47,4 +47,15 @@ pub fn eval_bin(left: Literal, op: Operator, right: Literal) -> Result<Literal, 
             },
         },
     }
+}
+
+#[test]
+fn eval() {
+    use crate::eval_input;
+    use crate::parser::Number;
+    assert_eq!(eval_input("1+2"), Ok((Literal::Num(Number::I32(3)))));
+    assert_eq!(
+        eval_input("(1+2) * 3 / 4"),
+        Ok((Literal::Num(Number::I32((1 + 2) * 3 / 4))))
+    );
 }

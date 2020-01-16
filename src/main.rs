@@ -12,8 +12,11 @@ use parser::{build_ast, Literal};
 use typechecking::type_ast;
 
 fn eval_input<'a>(s: &'a str) -> Result<Literal, ParserError> {
-    eval_ast(type_ast()(build_ast()(s.to_string()).unwrap().1)?.1)
+    let ast = type_ast()(build_ast()(s.to_string()).unwrap().1)?;
+    println!("{:#?}", ast);
+    eval_ast(ast.1)
 }
+
 fn main() {
     println!("{:#?}", eval_input("1 + 2"));
 }

@@ -124,57 +124,56 @@ pub fn take_operator() -> Parser<OpTerm, String> {
 
 #[test]
 fn ast() {
-    use crate::parser::build_ast;
-    use crate::parser::Literal;
+    use crate::parser::{build_ast, Binary, Literal};
 
     assert_eq!(
         build_ast()("(1 + 2) * 3".to_string()),
         Ok((
             "".to_string(),
-            Bin::Binary {
-                left: Expr::BinOp(Box::new(Bin::Binary {
-                    left: Expr::BinOp(Box::new(Bin::Expr(Expr::Lit(Literal::Num(Number::I32(1)))))),
+            Bin::Bin(Binary {
+                left: Expr::BinOp(Box::new(Bin::Bin(Binary {
+                    left: Expr::BinOp(Box::new(Bin::Uno(Expr::Lit(Literal::Num(Number::I32(1)))))),
                     op: Operator {
                         lexeme: "+".to_string(),
                         precedence: 5,
                         assoc: Assoc::Left,
                     },
-                    right: Expr::BinOp(Box::new(Bin::Expr(Expr::Lit(Literal::Num(Number::I32(
-                        2
-                    )))))),
-                })),
+                    right: Expr::BinOp(Box::new(Bin::Uno(Expr::Lit(Literal::Num(Number::I32(2)))))),
+                    expr_type: None,
+                }))),
                 op: Operator {
                     lexeme: "*".to_string(),
                     precedence: 10,
                     assoc: Assoc::Left,
                 },
-                right: Expr::BinOp(Box::new(Bin::Expr(Expr::Lit(Literal::Num(Number::I32(3)))))),
-            },
+                right: Expr::BinOp(Box::new(Bin::Uno(Expr::Lit(Literal::Num(Number::I32(3)))))),
+                expr_type: None,
+            }),
         ))
     );
     assert_eq!(
         build_ast()("1 + 2 * 3".to_string()),
         Ok((
             "".to_string(),
-            Bin::Binary {
-                left: Expr::BinOp(Box::new(Bin::Expr(Expr::Lit(Literal::Num(Number::I32(1)))))),
+            Bin::Bin(Binary {
+                left: Expr::BinOp(Box::new(Bin::Uno(Expr::Lit(Literal::Num(Number::I32(1)))))),
                 op: Operator {
                     lexeme: "+".to_string(),
                     precedence: 5,
                     assoc: Assoc::Left,
                 },
-                right: Expr::BinOp(Box::new(Bin::Binary {
-                    left: Expr::BinOp(Box::new(Bin::Expr(Expr::Lit(Literal::Num(Number::I32(2)))))),
+                right: Expr::BinOp(Box::new(Bin::Bin(Binary {
+                    left: Expr::BinOp(Box::new(Bin::Uno(Expr::Lit(Literal::Num(Number::I32(2)))))),
                     op: Operator {
                         lexeme: "*".to_string(),
                         precedence: 10,
                         assoc: Assoc::Left,
                     },
-                    right: Expr::BinOp(Box::new(Bin::Expr(Expr::Lit(Literal::Num(Number::I32(
-                        3
-                    )))))),
-                })),
-            },
+                    right: Expr::BinOp(Box::new(Bin::Uno(Expr::Lit(Literal::Num(Number::I32(3)))))),
+                    expr_type: None,
+                }))),
+                expr_type: None,
+            }),
         ))
     );
 }

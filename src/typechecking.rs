@@ -35,17 +35,17 @@ fn binary_type(left: Type, op: &Operator, right: Type) -> Result<Type, ParserErr
                 "+" => Ok(Type::U32),
                 "*" => Ok(Type::U32),
                 "-" => Ok(Type::U32),
-                "/" => Ok(Type::F32),
+                "/" => Ok(Type::U32),
                 _ => Err(ParserError::new_no_rem(format!(
                     "Unknown operator `{}`",
                     op.lexeme
                 ))),
             },
             Type::I32 => Err(ParserError::new_no_rem(
-                "Cannot add an u32 and an i32 between them".to_string(),
+                "Cannot call operator an u32 and an i32 between them".to_string(),
             )),
             Type::F32 => Err(ParserError::new_no_rem(
-                "Cannot add an u32 and an f32 between them".to_string(),
+                "Cannot call operator an u32 and an f32 between them".to_string(),
             )),
         },
         Type::I32 => match right {
@@ -53,17 +53,17 @@ fn binary_type(left: Type, op: &Operator, right: Type) -> Result<Type, ParserErr
                 "+" => Ok(Type::I32),
                 "*" => Ok(Type::I32),
                 "-" => Ok(Type::I32),
-                "/" => Ok(Type::F32),
+                "/" => Ok(Type::I32),
                 _ => Err(ParserError::new_no_rem(format!(
                     "Unknown operator `{}`",
                     op.lexeme
                 ))),
             },
             Type::U32 => Err(ParserError::new_no_rem(
-                "Cannot add an i32 and an u32 between them".to_string(),
+                "Cannot call operator an i32 and an u32 between them".to_string(),
             )),
             Type::F32 => Err(ParserError::new_no_rem(
-                "Cannot add an i32 and an f32 between them".to_string(),
+                "Cannot call operator an i32 and an f32 between them".to_string(),
             )),
         },
         Type::F32 => match right {
@@ -78,10 +78,10 @@ fn binary_type(left: Type, op: &Operator, right: Type) -> Result<Type, ParserErr
                 ))),
             },
             Type::U32 => Err(ParserError::new_no_rem(
-                "Cannot add an f32 and an u32 between them".to_string(),
+                "Cannot call operator an f32 and an u32 between them".to_string(),
             )),
             Type::I32 => Err(ParserError::new_no_rem(
-                "Cannot add an f32 and an i32 between them".to_string(),
+                "Cannot call operator an f32 and an i32 between them".to_string(),
             )),
         },
     }

@@ -85,13 +85,14 @@ impl Div for Number {
     type Output = Self;
 
     fn div(self, other: Self) -> Self {
+        println!("{:#?}, {:#?}", self, other);
         match self {
             Self::I32(lnum) => match other {
-                Self::I32(rnum) => return Self::F32(lnum as f32 / lnum as f32),
+                Self::I32(rnum) => return Self::I32(lnum / rnum),
                 _ => unreachable!(),
             },
             /*Self::U32(lnum) => match other{
-                Self::U32(rnum) => return Self::U32(lnum as f32 / lnum as f32)
+                Self::U32(rnum) => return Self::U32(lnum/ rnum)
                 _ => unreachable!(),
             }*/
             Self::F32(lnum) => match other {
