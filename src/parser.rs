@@ -125,6 +125,7 @@ pub enum OpTerm {
     OpTerm(Expr),
 }
 #[derive(Debug, Clone, PartialEq)]
+#[allow(dead_code)]
 pub enum Expr {
     Lit(Literal),
     Var(String),
@@ -152,7 +153,15 @@ pub struct Operator {
     pub precedence: i32,
     pub assoc: Assoc,
 }
-
+impl Operator {
+    pub fn is_left_assoc(&self) -> bool {
+        if let Assoc::Left = self.assoc {
+            true
+        } else {
+            false
+        }
+    }
+}
 #[derive(Debug, Clone, PartialEq)]
 #[allow(dead_code)]
 pub enum Assoc {
@@ -201,6 +210,20 @@ impl Bin {
         }
     }
 }
+pub fn take_parenthesized() -> Parser<Vec<OpTerm>, ParserError> {
+    Box::new(|s| {
+        take_char('(')(s.remaining()).and_then(|(remaining, _)| {
+            let (remaining, expr) = many1(take_expr())(remaining)?;
+            let (remaining, _) = take_char(')')(remaining)?;
+            Ok((
+                remaining,
+                vec![OpTerm::OpTerm(Expr::Operation(
+                    expr.into_iter().nth(0).unwrap(),
+                ))],
+            ))
+        })
+    })
+}
 pub fn take_expr() -> Parser<Vec<OpTerm>, String> {
     Box::new(move |s| {
         let (remaining, mut expr) = take_number()(s)
@@ -210,47 +233,22 @@ pub fn take_expr() -> Parser<Vec<OpTerm>, String> {
                     vec![OpTerm::OpTerm(Expr::Lit(Literal::Num(expr)))],
                 ))
             })
-            .or_else(|error| {
-                take_char('(')(error.remaining()).and_then(|(remaining, _)| {
-                    let (remaining, expr) = many1(take_expr())(remaining)?;
-                    let (remaining, _) = take_char(')')(remaining)?;
-                    Ok((
-                        remaining,
-                        vec![OpTerm::OpTerm(Expr::Operation(
-                            expr.into_iter().nth(0).unwrap(),
-                        ))],
-                    ))
-                })
-            })?;
+            .or_else(take_parenthesized())?;
         let (remaining, _) = take_whitespaces()(remaining)?;
         let (remaining, values) = many(Box::new(|s| {
-            let mut temp_expr = vec![
-                OpTerm::OpTerm(Expr::Var("".to_string())),
-                OpTerm::OpTerm(Expr::Var("".to_string())),
-            ];
+            let mut temp_expr = vec![];
             take_operator()(s)
                 .and_then(|(remaining, op)| {
-                    temp_expr[0] = op;
+                    temp_expr.push(op);
                     take_whitespaces()(remaining)
                 })
                 .and_then(|(remaining, _)| {
                     let (remaining, num) = take_number()(remaining)?;
-                    temp_expr[1] = OpTerm::OpTerm(Expr::Lit(Literal::Num(num)));
+                    temp_expr.push(OpTerm::OpTerm(Expr::Lit(Literal::Num(num))));
                     let (remaining, _) = take_whitespaces()(remaining)?;
                     Ok((remaining, temp_expr))
                 })
-                .or_else(|error| {
-                    take_char('(')(error.remaining()).and_then(|(remaining, _)| {
-                        let (remaining, expr) = many1(take_expr())(remaining)?;
-                        let (remaining, _) = take_char(')')(remaining)?;
-                        Ok((
-                            remaining,
-                            vec![OpTerm::OpTerm(Expr::Operation(
-                                expr.into_iter().nth(0).unwrap(),
-                            ))],
-                        ))
-                    })
-                })
+                .or_else(take_parenthesized())
         }))(remaining)?;
         for i in values {
             for j in i {

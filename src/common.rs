@@ -107,7 +107,7 @@ pub fn take_str(str_to_match: String) -> Parser<String, String> {
 pub fn take_one_of(strings: Vec<&'static str>) -> Parser<String, String> {
     Box::new(move |s| {
         let mut remaining = s;
-        for (k, i) in strings.iter().enumerate() {
+        for i in strings.iter() {
             match take_str(i.to_string())(remaining) {
                 Ok((remaining, matched)) => return Ok((remaining, matched)),
                 Err(s) => remaining = s.remaining(),

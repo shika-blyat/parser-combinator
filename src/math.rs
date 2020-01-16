@@ -24,7 +24,9 @@ pub fn into_ast() -> Parser<Bin, Vec<OpTerm>> {
                     while op_stack.last().is_some() {
                         let last = op_stack.last().unwrap();
                         if let OpTerm::Op(last_op) = last {
-                            if last_op.precedence >= op.precedence {
+                            if last_op.precedence > op.precedence
+                                || (last_op.precedence == op.precedence && op.is_left_assoc())
+                            {
                                 let operator = match op_stack.pop().unwrap() {
                                     OpTerm::Op(op) => op,
                                     _ => unreachable!(),
@@ -46,8 +48,6 @@ pub fn into_ast() -> Parser<Bin, Vec<OpTerm>> {
         for i in op_stack.into_iter().rev() {
             if let OpTerm::Op(op) = i {
                 add_infix_op(&mut ast, op);
-            } else {
-                unreachable!();
             }
         }
         Ok(("".to_string(), ast.into_iter().nth(0).unwrap()))
@@ -64,29 +64,23 @@ pub fn number_from_type<'a>(s: Option<String>, num: String, default: Number) -> 
         _ => default,
     }
 }
+fn take_num_type() -> Parser<(Vec<char>, Option<String>), (String, Vec<char>)> {
+    Box::new(|(remaining, val)| {
+        let (remaining, num_type) = match take_one_of(vec!["u32", "i32", "f32"])(remaining) {
+            Ok((remaining, num_type)) => Ok((remaining, Some(num_type))),
+            Err(remaining) => Ok((remaining.remaining(), None)),
+        }?;
+        Ok((remaining, (val, num_type)))
+    })
+}
 pub fn take_number() -> Parser<Number, String> {
     Box::new(|s| {
-        let (remaining, (mut num, num_type)) =
-            many1(take_digit())(s).and_then(|(remaining, val)| {
-                let (remaining, num_type) = match take_one_of(vec!["u32", "i32", "f32"])(remaining)
-                {
-                    Ok((remaining, num_type)) => Ok((remaining, Some(num_type))),
-                    Err(remaining) => Ok((remaining.remaining(), None)),
-                }?;
-                Ok((remaining, (val, num_type)))
-            })?;
+        let (remaining, (mut num, num_type)) = many1(take_digit())(s).and_then(take_num_type())?;
         match take_char('.')(remaining) {
             Ok((remaining, dot)) => {
                 num.push(dot);
-                let (remaining, (mut decimals, num_type)) = many(take_digit())(remaining)
-                    .and_then(|(remaining, val)| {
-                        let (remaining, num_type) =
-                            match take_one_of(vec!["u32", "i32", "f32"])(remaining) {
-                                Ok((remaining, num_type)) => Ok((remaining, Some(num_type))),
-                                Err(remaining) => Ok((remaining.remaining(), None)),
-                            }?;
-                        Ok((remaining, (val, num_type)))
-                    })?;
+                let (remaining, (mut decimals, num_type)) =
+                    many(take_digit())(remaining).and_then(take_num_type())?;
                 num.append(&mut decimals);
                 Ok((
                     remaining,
