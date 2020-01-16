@@ -1,5 +1,5 @@
 use crate::combinators::{many, many1};
-use crate::common::{take_char, take_digit, take_str};
+use crate::common::{take_char, take_digit, take_one_of, take_str};
 use crate::error::ParserError;
 use crate::parser::{Assoc, Bin, Expr, Number, OpTerm, Operator, Parser};
 
@@ -53,23 +53,57 @@ pub fn into_ast() -> Parser<Bin, Vec<OpTerm>> {
         Ok(("".to_string(), ast.into_iter().nth(0).unwrap()))
     })
 }
-
+pub fn number_from_type<'a>(s: Option<String>, num: String, default: Number) -> Number {
+    if s.is_none() {
+        return default;
+    }
+    match s.unwrap().as_str() {
+        "u32" => Number::U32(num.parse().unwrap()),
+        "f32" => Number::F32(num.parse().unwrap()),
+        "i32" => Number::I32(num.parse().unwrap()),
+        _ => default,
+    }
+}
 pub fn take_number() -> Parser<Number, String> {
     Box::new(|s| {
-        let (remaining, mut num) = many1(take_digit())(s)?;
+        let (remaining, (mut num, num_type)) =
+            many1(take_digit())(s).and_then(|(remaining, val)| {
+                let (remaining, num_type) = match take_one_of(vec!["u32", "i32", "f32"])(remaining)
+                {
+                    Ok((remaining, num_type)) => Ok((remaining, Some(num_type))),
+                    Err(remaining) => Ok((remaining.remaining(), None)),
+                }?;
+                Ok((remaining, (val, num_type)))
+            })?;
         match take_char('.')(remaining) {
             Ok((remaining, dot)) => {
                 num.push(dot);
-                let (remaining, mut decimals) = many(take_digit())(remaining)?;
+                let (remaining, (mut decimals, num_type)) = many(take_digit())(remaining)
+                    .and_then(|(remaining, val)| {
+                        let (remaining, num_type) =
+                            match take_one_of(vec!["u32", "i32", "f32"])(remaining) {
+                                Ok((remaining, num_type)) => Ok((remaining, Some(num_type))),
+                                Err(remaining) => Ok((remaining.remaining(), None)),
+                            }?;
+                        Ok((remaining, (val, num_type)))
+                    })?;
                 num.append(&mut decimals);
                 Ok((
                     remaining,
-                    Number::F32(num.iter().collect::<String>().parse().unwrap()),
+                    number_from_type(
+                        num_type,
+                        num.iter().collect::<String>(),
+                        Number::F32(num.iter().collect::<String>().parse().unwrap()),
+                    ),
                 ))
             }
             Err(error) => Ok((
                 error.remaining(),
-                Number::I32(num.iter().collect::<String>().parse().unwrap()),
+                number_from_type(
+                    num_type,
+                    num.iter().collect::<String>(),
+                    Number::I32(num.iter().collect::<String>().parse().unwrap()),
+                ),
             )),
         }
     })

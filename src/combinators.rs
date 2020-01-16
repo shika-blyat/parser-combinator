@@ -11,7 +11,6 @@ pub fn many<T: 'static>(a: Parser<T, String>) -> Parser<Vec<T>, String> {
         Ok((remaining, result))
     })
 }
-
 pub fn many1<T: 'static>(predicate: Parser<T, String>) -> Parser<Vec<T>, String> {
     Box::new(move |s| {
         let mut values = vec![];

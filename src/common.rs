@@ -103,3 +103,19 @@ pub fn take_str(str_to_match: String) -> Parser<String, String> {
         Ok((schars.collect(), str_to_match.to_string()))
     })
 }
+
+pub fn take_one_of(strings: Vec<&'static str>) -> Parser<String, String> {
+    Box::new(move |s| {
+        let mut remaining = s;
+        for (k, i) in strings.iter().enumerate() {
+            match take_str(i.to_string())(remaining) {
+                Ok((remaining, matched)) => return Ok((remaining, matched)),
+                Err(s) => remaining = s.remaining(),
+            }
+        }
+        Err(ParserError::new(
+            remaining,
+            format!("Expected one of the {:#?}", strings),
+        ))
+    })
+}

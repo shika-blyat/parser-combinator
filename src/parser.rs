@@ -10,13 +10,13 @@ pub type Parser<T, X> = Box<dyn Fn(X) -> Result<(String, T), ParserError>>;
 pub enum Number {
     I32(i32),
     F32(f32),
-    //U32(u32),
+    U32(u32),
 }
 impl Number {
     pub fn get_type(&self) -> Type {
         match self {
             Self::I32(_) => Type::I32,
-            //Self::U32(_) => Type::U32,
+            Self::U32(_) => Type::U32,
             Self::F32(_) => Type::F32,
         }
     }
@@ -30,10 +30,10 @@ impl Add for Number {
                 Self::I32(rnum) => return Self::I32(lnum + rnum),
                 _ => unreachable!(),
             },
-            /*Self::U32(lnum) => match other{
-                Self::U32(rnum) => return Self::U32(lnum + rnum)
+            Self::U32(lnum) => match other {
+                Self::U32(rnum) => return Self::U32(lnum + rnum),
                 _ => unreachable!(),
-            }*/
+            },
             Self::F32(lnum) => match other {
                 Self::F32(rnum) => return Self::F32(lnum + rnum),
                 _ => unreachable!(),
@@ -50,10 +50,10 @@ impl Sub for Number {
                 Self::I32(rnum) => return Self::I32(lnum - rnum),
                 _ => unreachable!(),
             },
-            /*Self::U32(lnum) => match other{
-                Self::U32(rnum) => return Self::U32(lnum - rnum)
+            Self::U32(lnum) => match other {
+                Self::U32(rnum) => return Self::U32(lnum - rnum),
                 _ => unreachable!(),
-            }*/
+            },
             Self::F32(lnum) => match other {
                 Self::F32(rnum) => return Self::F32(lnum - rnum),
                 _ => unreachable!(),
@@ -70,10 +70,10 @@ impl Mul for Number {
                 Self::I32(rnum) => return Self::I32(lnum * rnum),
                 _ => unreachable!(),
             },
-            /*Self::U32(lnum) => match other{
-                Self::U32(rnum) => return Self::U32(lnum * rnum)
+            Self::U32(lnum) => match other {
+                Self::U32(rnum) => return Self::U32(lnum * rnum),
                 _ => unreachable!(),
-            }*/
+            },
             Self::F32(lnum) => match other {
                 Self::F32(rnum) => return Self::F32(lnum * rnum),
                 _ => unreachable!(),
@@ -85,16 +85,15 @@ impl Div for Number {
     type Output = Self;
 
     fn div(self, other: Self) -> Self {
-        println!("{:#?}, {:#?}", self, other);
         match self {
             Self::I32(lnum) => match other {
                 Self::I32(rnum) => return Self::I32(lnum / rnum),
                 _ => unreachable!(),
             },
-            /*Self::U32(lnum) => match other{
-                Self::U32(rnum) => return Self::U32(lnum/ rnum)
+            Self::U32(lnum) => match other {
+                Self::U32(rnum) => return Self::U32(lnum / rnum),
                 _ => unreachable!(),
-            }*/
+            },
             Self::F32(lnum) => match other {
                 Self::F32(rnum) => return Self::F32(lnum / rnum),
                 _ => unreachable!(),

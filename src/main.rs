@@ -9,6 +9,10 @@ mod typechecking;
 use error::ParserError;
 use evaluation::eval_ast;
 use parser::{build_ast, Literal};
+use std::{
+    collections::HashMap,
+    io::{stdin, stdout, Write},
+};
 use typechecking::type_ast;
 
 fn eval_input<'a>(s: &'a str) -> Result<Literal, ParserError> {
@@ -17,5 +21,17 @@ fn eval_input<'a>(s: &'a str) -> Result<Literal, ParserError> {
 }
 
 fn main() {
-    println!("{:#?}", build_ast()("(1 + 2) * 3 / 4".to_string()));
+    //let mut variables = HashMap::new();
+    loop {
+        let mut input = String::new();
+        print!(">>> ");
+        stdout().flush().expect("Failed to write line");
+        stdin().read_line(&mut input).expect("Failed to read line");
+        let input = input.trim();
+        if input == "quit" {
+            break;
+        }
+        let r = eval_input(input);
+        println!("{:#?}", r);
+    }
 }
