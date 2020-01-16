@@ -2,6 +2,7 @@ use crate::combinators::{many, many1};
 use crate::common::{take_char, take_whitespaces};
 use crate::error::ParserError;
 use crate::math::{into_ast, take_number, take_operator};
+use std::ops::{Add, Div, Mul, Sub};
 
 pub type Parser<T, X> = Box<dyn Fn(X) -> Result<(String, T), ParserError>>;
 
@@ -17,6 +18,86 @@ impl Number {
             Self::I32(_) => Type::I32,
             //Self::U32(_) => Type::U32,
             Self::F32(_) => Type::F32,
+        }
+    }
+}
+impl Add for Number {
+    type Output = Self;
+
+    fn add(self, other: Self) -> Self {
+        match self {
+            Self::I32(lnum) => match other {
+                Self::I32(rnum) => return Self::I32(lnum + rnum),
+                _ => unreachable!(),
+            },
+            /*Self::U32(lnum) => match other{
+                Self::U32(rnum) => return Self::U32(lnum + rnum)
+                _ => unreachable!(),
+            }*/
+            Self::F32(lnum) => match other {
+                Self::F32(rnum) => return Self::F32(lnum + rnum),
+                _ => unreachable!(),
+            },
+        }
+    }
+}
+impl Sub for Number {
+    type Output = Self;
+
+    fn sub(self, other: Self) -> Self {
+        match self {
+            Self::I32(lnum) => match other {
+                Self::I32(rnum) => return Self::I32(lnum - rnum),
+                _ => unreachable!(),
+            },
+            /*Self::U32(lnum) => match other{
+                Self::U32(rnum) => return Self::U32(lnum - rnum)
+                _ => unreachable!(),
+            }*/
+            Self::F32(lnum) => match other {
+                Self::F32(rnum) => return Self::F32(lnum - rnum),
+                _ => unreachable!(),
+            },
+        }
+    }
+}
+impl Mul for Number {
+    type Output = Self;
+
+    fn mul(self, other: Self) -> Self {
+        match self {
+            Self::I32(lnum) => match other {
+                Self::I32(rnum) => return Self::I32(lnum * rnum),
+                _ => unreachable!(),
+            },
+            /*Self::U32(lnum) => match other{
+                Self::U32(rnum) => return Self::U32(lnum * rnum)
+                _ => unreachable!(),
+            }*/
+            Self::F32(lnum) => match other {
+                Self::F32(rnum) => return Self::F32(lnum * rnum),
+                _ => unreachable!(),
+            },
+        }
+    }
+}
+impl Div for Number {
+    type Output = Self;
+
+    fn div(self, other: Self) -> Self {
+        match self {
+            Self::I32(lnum) => match other {
+                Self::I32(rnum) => return Self::F32(lnum as f32 / lnum as f32),
+                _ => unreachable!(),
+            },
+            /*Self::U32(lnum) => match other{
+                Self::U32(rnum) => return Self::U32(lnum as f32 / lnum as f32)
+                _ => unreachable!(),
+            }*/
+            Self::F32(lnum) => match other {
+                Self::F32(rnum) => return Self::F32(lnum / rnum),
+                _ => unreachable!(),
+            },
         }
     }
 }
@@ -56,6 +137,12 @@ impl Expr {
             Self::Lit(literal) => literal.get_type(),
             Self::Var(_) => panic!("Cannot know the type of a variable yet"),
             _ => unreachable!(), // In the typed ast, there is normally no Operation variant
+        }
+    }
+    pub fn to_bin(self) -> Bin {
+        match self {
+            Self::BinOp(bin) => *bin,
+            _ => panic!("Can't call `to_bin` on an expr which is not a Expr::BinOp"),
         }
     }
 }
