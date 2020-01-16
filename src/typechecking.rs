@@ -1,32 +1,30 @@
 use crate::error::ParserError;
 use crate::parser::{Bin, Binary, Expr, Operator, Parser, Type};
+use std::ops::DerefMut;
 
 impl Bin {
-    pub fn into_typed(self) -> Result<Bin, ParserError> {
+    pub fn into_typed(&mut self) -> Result<Bin, ParserError> {
         match self {
             Bin::Bin(Binary {
-                mut left,
-                mut right,
-                op,
-                ..
+                left, right, op, ..
             }) => {
-                let left = match left.unwrap_bin() {
-                    Some(bin) => Box::new(bin.clone().into_typed()?),
-                    None => unreachable!(),
+                let left = match left {
+                    Expr::BinOp(bin) => Box::new(bin.deref_mut().into_typed()?),
+                    _ => unreachable!(),
                 };
-                let right = match right.unwrap_bin() {
-                    Some(bin) => Box::new(bin.clone().into_typed()?),
-                    None => unreachable!(),
+                let right = match right {
+                    Expr::BinOp(bin) => Box::new(bin.deref_mut().into_typed()?),
+                    _ => unreachable!(),
                 };
                 let expr_type = binary_type(left.get_type(), &op, right.get_type())?;
                 Ok(Bin::new_bin_typed(
                     Expr::BinOp(left),
-                    op,
+                    op.clone(),
                     Expr::BinOp(right),
                     expr_type,
                 ))
             }
-            Bin::Uno(expr) => Ok(Bin::Uno(expr)),
+            Bin::Uno(expr) => Ok(Bin::Uno(expr.clone())),
         }
     }
 }
@@ -90,7 +88,7 @@ fn binary_type(left: Type, op: &Operator, right: Type) -> Result<Type, ParserErr
 }
 
 pub fn type_ast() -> Parser<Bin, Bin> {
-    Box::new(|bin| {
+    Box::new(|mut bin| {
         let typed_bin = bin.into_typed()?;
         Ok(("".to_string(), typed_bin))
     })

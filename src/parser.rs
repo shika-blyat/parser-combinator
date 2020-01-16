@@ -58,12 +58,6 @@ impl Expr {
             _ => unreachable!(), // In the typed ast, there is normally no Operation variant
         }
     }
-    pub fn unwrap_bin<'a>(&'a mut self) -> Option<&'a mut Bin> {
-        match self {
-            Self::BinOp(bin) => Some(bin),
-            _ => None,
-        }
-    }
 }
 #[derive(Debug, Clone, PartialEq)]
 pub struct Operator {
