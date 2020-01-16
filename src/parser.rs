@@ -145,7 +145,6 @@ impl Expr {
     pub fn get_type(&self) -> Type {
         match self {
             Self::Lit(literal) => literal.get_type(),
-            Self::Var(_) => panic!("Cannot know the type of a variable yet"),
             _ => unreachable!(), // In the typed ast, there is normally no Operation variant
         }
     }

@@ -19,7 +19,6 @@ fn eval_input<'a>(s: &'a str) -> Result<Literal, ParserError> {
     let ast = type_ast()(build_ast()(s.to_string()).unwrap().1)?;
     eval_ast(ast.1)
 }
-
 fn main() {
     //let mut variables = HashMap::new();
     loop {
