@@ -1,7 +1,10 @@
 use crate::combinators::{many, many1};
-use crate::common::{take_char, take_whitespaces};
+use crate::common::{
+    take_char, take_identifier, take_predicate1, take_str, take_whitespaces, take_whitespaces1,
+};
 use crate::error::ParserError;
 use crate::math::{into_ast, take_number, take_operator};
+use std::collections::HashMap;
 use std::ops::{Add, Div, Mul, Sub};
 
 pub type Parser<T, X> = Box<dyn Fn(X) -> Result<(String, T), ParserError>>;
@@ -134,10 +137,15 @@ impl OpTerm {
     }
 }
 #[derive(Debug, Clone, PartialEq)]
+pub struct Var {
+    identifier: String,
+    value: Bin,
+}
+#[derive(Debug, Clone, PartialEq)]
 #[allow(dead_code)]
 pub enum Expr {
     Lit(Literal),
-    Var(String),
+    Var(Box<Var>),
     Operation(Vec<OpTerm>),
     BinOp(Box<Bin>),
 }
@@ -264,6 +272,25 @@ pub fn take_expr() -> Parser<Vec<OpTerm>, String> {
             }
         }
         Ok((remaining, expr))
+    })
+}
+pub fn take_var<'a>() -> Parser<(), (String, &'a mut HashMap<String, Expr>)> {
+    Box::new(move |(s, variables)| {
+        let mut identifier = String::new();
+        let (remaining, expr) = take_str("let".to_string())(s)
+            .and_then(|(remaining, _)| take_whitespaces1()(remaining))
+            .and_then(|(remaining, _)| take_identifier()(remaining))
+            .map(|(remaining, ident)| {
+                identifier = ident;
+                ((remaining, ()))
+            })
+            .and_then(|(remaining, _)| take_whitespaces()(remaining))
+            .and_then(|(remaining, _)| take_char('=')(remaining))
+            .and_then(|(remaining, _)| take_whitespaces()(remaining))
+            .and_then(|(remaining, _)| take_predicate1(Box::new(|s| s != ';'))(remaining))?;
+        let expr = Expr::BinOp(Box::new(build_ast()(expr)?.1));
+        variables.insert(identifier, expr);
+        Ok((remaining, ()))
     })
 }
 pub fn build_ast() -> Parser<Bin, String> {

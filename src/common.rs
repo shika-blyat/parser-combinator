@@ -1,4 +1,5 @@
-use crate::combinators::many;
+use crate::combinators::{many, many1};
+
 use crate::error::ParserError;
 use crate::parser::Parser;
 pub fn take_digit() -> Parser<char, String> {
@@ -61,7 +62,7 @@ pub fn take_char(c: char) -> Parser<char, String> {
         }
     })
 }
-pub fn take_cpredicate(predicate: Box<dyn Fn(char) -> bool>) -> Parser<char, String> {
+pub fn take_cpredicate(predicate: Box<Fn(char) -> bool>) -> Parser<char, String> {
     Box::new(move |s| {
         if s.len() == 0 {
             return Err(ParserError::new_no_reason(s));
@@ -75,8 +76,40 @@ pub fn take_cpredicate(predicate: Box<dyn Fn(char) -> bool>) -> Parser<char, Str
         }
     })
 }
+pub fn take_identifier() -> Parser<String, String> {
+    Box::new(|s| {
+        take_cpredicate(Box::new(|c| c.is_ascii_alphabetic()))(s)
+            .map(|(remaining, c)| (remaining, c.to_string()))
+            .and_then(|(remaining, mut identifier)| {
+                let (remaining, ident) = take_predicate1(|c| c.is_ascii_alphanumeric())(remaining)?;
+                identifier.push_str(&ident);
+                Ok((remaining, identifier))
+            })
+    })
+}
+pub fn take_predicate1<T: 'static + Fn(char) -> bool>(predicate: T) -> Parser<String, String> {
+    Box::new(move |s| {
+        if s.len() == 0 {
+            return Err(ParserError::new_no_reason(s));
+        }
+        let mut values = vec![];
+        let mut chars = s.chars();
+        let mut next = chars.next().unwrap();
+        while predicate(next) {
+            values.push(next);
+            next = match chars.next() {
+                Some(x) => x,
+                None => return Ok((chars.collect(), values.into_iter().collect())),
+            };
+        }
+        Ok((chars.collect(), values.into_iter().collect()))
+    })
+}
 pub fn take_whitespaces() -> Parser<Vec<char>, String> {
     Box::new(|s| many(take_cpredicate(Box::new(|c: char| c.is_whitespace())))(s))
+}
+pub fn take_whitespaces1() -> Parser<Vec<char>, String> {
+    Box::new(|s| many1(take_cpredicate(Box::new(|c: char| c.is_whitespace())))(s))
 }
 pub fn take_str(str_to_match: String) -> Parser<String, String> {
     Box::new(move |s| {
